@@ -8,31 +8,30 @@
   <!-- ur5e -->
   <!-- TODO: have this variable based on limited == true/false -->
   
-  <xacro:include filename="$(find lab09_gazebo)/urdf/inc/ur5e_macro.xacro" />
-  <xacro:ur5e_robot prefix="" />
+  <!-- <xacro:include filename="$(find lab09_gazebo)/urdf/inc/ur5e_macro.xacro" /> -->
+  <!-- <xacro:ur5e_robot prefix="" /> -->
 
 
   <!-- gripper -->
   <xacro:include filename="$(find lab09_gazebo)/urdf/inc/robotiq_epick_model.xacro" />
  
   <link name="world" />
-
   <joint name="world_joint" type="fixed">
     <parent link="world" />
-    <child link = "base_link" />
-    <origin xyz="0.8 0.0 0.675" rpy="0.0 0.0 0.0" />
+    <child link = "epick" />
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
   </joint>
 
-  <joint name="robotiq_epick_joint" type="fixed">
-    <origin xyz="0 0 0.004" rpy="0 0 ${-pi/2.0}" />
-    <parent link="tool0"/>
-    <child link="epick"/>
-  </joint>
+  <!-- <joint name="world_joint" type="fixed"> -->
+  <!--   <parent link="world" /> -->
+  <!--   <child link = "base_link" /> -->
+  <!--   <origin xyz="0.8 0.0 0.675" rpy="0.0 0.0 0.0" /> -->
+  <!-- </joint> -->
 
-  <joint name="camera_joint" type="fixed">
-    <parent link="world" />
-    <child link = "camera_link" />
-    <origin xyz="1.9 0.25 1.675" rpy="0.0 ${pi/2.6} ${pi}" />
-  </joint>
+  <!-- <joint name="robotiq_epick_joint" type="fixed"> -->
+  <!--   <origin xyz="0 0 0.004" rpy="0 0 ${-pi/2.0}" /> -->
+  <!--   <parent link="tool0"/> -->
+  <!--   <child link="epick"/> -->
+  <!-- </joint> -->
 
 </robot>

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- Gazebo parameters -->
+    <arg name="limited" default="false"  doc="If true, limits joint range [-PI, PI] on all joints." />
+    <arg name="paused" default="false" doc="If true, start Gazebo in paused mode. If false, start simulation as soon as Gazebo has loaded." />
+    <arg name="gui" default="true" doc="If true, Gazebo UI is started. If false, only start Gazebo server." />
+
+    <arg name="gazebo_model_name" default="robot" doc="The name to give to the model in Gazebo (after spawning it)." />
+    <arg name="robot_description_param_name" default="robot_description" doc="Name of the parameter which contains the robot description (ie: URDF) which should be spawned into Gazebo." />
+    <arg name="spawn_z" default="0.1" doc="At which height the model should be spawned. NOTE: lower values will cause the robot to collide with the ground plane." />
+
+    <!-- Start Gazebo and load the empty world if requested to do so -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find lab09_gazebo)/worlds/lab_setup.world"/>
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="gui" value="$(arg gui)"/>
+    </include>
+
+  <!-- load robot descripton -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find lab09_gazebo)/urdf/ur5e_robotiq_epick_robot.urdf.xacro'" />
+
+  <!-- push robot description to factory and spawn robot in gazebo -->
+  <node name="spawn_robot_gazebo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model robot" respawn="false" output="screen" />
+
+  <!-- load camera descripton -->
+  <param name="camera_description" command="$(find xacro)/xacro '$(find lab09_gazebo)/urdf/camera_description.urdf.xacro'" />
+
+  <!-- push camera description to factory and spawn robot in gazebo -->
+  <node name="spawn_camera_gazebo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param camera_description -model camera" respawn="false" output="screen" />
+
+</launch>
