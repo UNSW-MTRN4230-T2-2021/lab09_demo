@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro"
+       name="ur5e" >
+
+  <!-- common stuff -->
+  <xacro:include filename="$(find ur_description)/urdf/common.gazebo.xacro" />
+
+  <!-- ur5e -->
+  <xacro:include filename="$(find ur_description)/urdf/inc/ur5e_macro.xacro" />
+
+  <!-- gripper -->
+  <xacro:include filename="$(find lab09_gazebo)/urdf/robotiq_epick_model.xacro" />
+ 
+  <xacro:ur5e_robot prefix="" joint_limit_parameters_file="$(find lab09_gazebo)/config/ur5e/joint_limits.yaml" />
+
+  <link name="world" />
+
+  <joint name="world_joint" type="fixed">
+    <parent link="world" />
+    <child link = "base_link" />
+    <origin xyz="0.8 0.0 0.675" rpy="0.0 0.0 0.0" />
+  </joint>
+
+  <joint name="robotiq_epick_joint" type="fixed">
+    <origin xyz="0 0 0.004" rpy="0 0 ${-pi/2.0}" />
+    <parent link="tool0"/>
+    <child link="epick"/>
+  </joint>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="world" />
+    <child link = "camera_link" />
+    <origin xyz="1.9 0.25 1.675" rpy="0.0 ${pi/2.6} ${pi}" />
+  </joint>
+
+</robot>
