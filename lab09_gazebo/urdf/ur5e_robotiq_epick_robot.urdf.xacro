@@ -2,17 +2,19 @@
 <robot xmlns:xacro="http://ros.org/wiki/xacro"
        name="ur5e" >
 
-  <!-- common stuff -->
-  <xacro:include filename="$(find ur_description)/urdf/common.gazebo.xacro" />
+  <!-- <!-1- common stuff -1-> -->
+  <!-- <xacro:include filename="$(find ur_description)/urdf/common.gazebo.xacro" /> -->
 
   <!-- ur5e -->
-  <xacro:include filename="$(find ur_description)/urdf/inc/ur5e_macro.xacro" />
+  <!-- TODO: have this variable based on limited == true/false -->
+  
+  <xacro:include filename="$(find lab09_gazebo)/urdf/inc/ur5e_macro.xacro" />
+  <xacro:ur5e_robot prefix="" />
+
 
   <!-- gripper -->
-  <xacro:include filename="$(find lab09_gazebo)/urdf/robotiq_epick_model.xacro" />
+  <xacro:include filename="$(find lab09_gazebo)/urdf/inc/robotiq_epick_model.xacro" />
  
-  <xacro:ur5e_robot prefix="" joint_limit_parameters_file="$(find lab09_gazebo)/config/ur5e/joint_limits.yaml" />
-
   <link name="world" />
 
   <joint name="world_joint" type="fixed">
