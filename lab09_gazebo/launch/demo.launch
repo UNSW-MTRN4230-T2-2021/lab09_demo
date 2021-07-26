@@ -18,6 +18,4 @@
 
     <include file="$(find ur5e_epick_moveit_config)/launch/ur5e_epick_moveit_planning_execution.launch"/>
 
-    <node name="moveit_cpp" pkg="lab09_gazebo" type="lab09_gazebo_moveit"/>
-
 </launch>

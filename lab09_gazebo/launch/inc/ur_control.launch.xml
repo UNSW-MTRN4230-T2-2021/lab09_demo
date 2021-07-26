@@ -45,6 +45,8 @@
       -urdf
       -param $(arg robot_description_param_name)
       -model $(arg gazebo_model_name)
+      -x 0.8
+      -z 0.775
       "
     output="screen" respawn="false" />
 
