@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro"
-       name="ur5e" >
+       name="ur5e_epick" >
 
   <!-- ur5e -->
   <xacro:include filename="$(find lab09_gazebo)/urdf/inc/ur5e_macro.xacro" />

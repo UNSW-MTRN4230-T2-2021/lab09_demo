@@ -51,7 +51,7 @@ int main(int argc, char** argv)
   auto spinner = ros::AsyncSpinner(1);
   spinner.start();
 
-  /* The planning group can be found in the ur5e_moveit_config/config/ur5e.srdf */
+  /* The planning group can be found in the ur5e_epick_moveit_config/config/ur5e.srdf */
   static const std::string PLANNING_GROUP = "manipulator";
 
   auto move_group = moveit::planning_interface::MoveGroupInterface(PLANNING_GROUP);
