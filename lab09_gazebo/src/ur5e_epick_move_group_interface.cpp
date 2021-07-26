@@ -36,10 +36,14 @@
 
 // This is for interfacing with Moveit move group
 #include <moveit/move_group_interface/move_group_interface.h>
+// #include <moveit/planning_interface/move_group_interface.h>
+// #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 // These are for the various ROS message formats we need
 #include <moveit_msgs/DisplayRobotState.h>
 #include <moveit_msgs/DisplayTrajectory.h>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 // #include <moveit_msgs/AttachedCollisionObject.h>
 // #include <moveit_msgs/CollisionObject.h>
@@ -51,13 +55,16 @@ int main(int argc, char** argv)
   auto spinner = ros::AsyncSpinner(1);
   spinner.start();
 
+  std::cout << "Hit enter to start";
+  std::cin.ignore();
+
   /* The planning group can be found in the ur5e_epick_moveit_config/config/ur5e.srdf */
   static const std::string PLANNING_GROUP = "manipulator";
 
   auto move_group = moveit::planning_interface::MoveGroupInterface(PLANNING_GROUP);
 
   // auto planning_scene_interface = moveit::planning_interface::PlanningSceneInterface();
-  auto planning_scene_interface = moveit::planning_interface::PlanningSceneInterface();
+  // auto planning_scene_interface = moveit::planning_interface::PlanningSceneInterface();
 
   auto const* joint_model_group = move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
 
@@ -73,16 +80,18 @@ int main(int argc, char** argv)
             std::ostream_iterator<std::string>(std::cout, ", "));
 
   // Get starting pose
-  // TODO
   robot_state::RobotState start_state(*move_group.getCurrentState());
 
   // Generate target pose
-  // TODO
   geometry_msgs::Pose target_pose1;
   target_pose1.position.x = 0.28;
   target_pose1.position.y = -0.2;
   target_pose1.position.z = 0.5;
-  target_pose1.orientation.w = 1.0;
+
+  tf2::Quaternion quat;
+  quat.setRPY(0,0,0);
+  target_pose1.orientation = tf2::toMsg(quat);
+
   move_group.setPoseTarget(target_pose1);
 
   auto my_plan = moveit::planning_interface::MoveGroupInterface::Plan{};

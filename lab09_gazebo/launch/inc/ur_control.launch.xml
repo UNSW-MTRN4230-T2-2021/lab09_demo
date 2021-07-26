@@ -45,7 +45,7 @@
       -urdf
       -param $(arg robot_description_param_name)
       -model $(arg gazebo_model_name)
-      -z $(arg spawn_z)"
+      "
     output="screen" respawn="false" />
 
   <!-- Load and start the controllers listed in the 'controllers' arg. -->

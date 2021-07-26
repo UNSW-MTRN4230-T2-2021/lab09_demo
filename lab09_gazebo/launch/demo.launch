@@ -2,32 +2,22 @@
 <launch>
 
     <!-- Gazebo parameters -->
-    <arg name="paused" default="false" doc="If true, start Gazebo in paused mode." />
-    <arg name="gui" default="true" doc="If false, only start Gazebo server." />
-    <!-- <arg name="limited" default="false"  doc="If true, limits joint range [-PI, PI] on all joints." /> -->
+    <arg name="limited" default="true" doc="Limit some joints to [-pi, pi]"/>
+    <arg name="paused" default="false" doc="Starts Gazebo in paused mode" />
 
-    <!-- Start Gazebo and load our world into an otherwise empty world -->
-    <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="world_name" value="$(find lab09_gazebo)/worlds/lab_setup.world"/>
+    <include file="$(find lab09_gazebo)/launch/ur5e_epick_bringup.launch">
+        <arg name="limited" value="$(arg limited)"/>
         <arg name="paused" value="$(arg paused)"/>
-        <arg name="gui" value="$(arg gui)"/>
     </include>
 
-  <!-- load robot descripton -->
-  <param name="robot_description" command="$(find xacro)/xacro '$(find lab09_gazebo)/urdf/ur5e_robotiq_epick_robot.urdf.xacro'" />
+    <!-- load camera descripton -->
+    <param name="camera_description" command="$(find xacro)/xacro '$(find lab09_gazebo)/urdf/camera_description.urdf.xacro'" />
 
-  <!-- push robot description to factory and spawn robot in gazebo -->
-  <node name="spawn_robot_gazebo_model" pkg="gazebo_ros" type="spawn_model" 
-      args="
-        -urdf
-        -param robot_description
-        -model robot"
-      respawn="false" output="screen" />
+    <!-- push camera description to factory and spawn robot in gazebo -->
+    <node name="spawn_camera_gazebo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param camera_description -model camera" respawn="false" output="screen" />
 
-  <!-- load camera descripton -->
-  <param name="camera_description" command="$(find xacro)/xacro '$(find lab09_gazebo)/urdf/camera_description.urdf.xacro'" />
+    <include file="$(find ur5e_epick_moveit_config)/launch/ur5e_epick_moveit_planning_execution.launch"/>
 
-  <!-- push camera description to factory and spawn robot in gazebo -->
-  <node name="spawn_camera_gazebo_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param camera_description -model camera" respawn="false" output="screen" />
+    <node name="moveit_cpp" pkg="lab09_gazebo" type="lab09_gazebo_moveit"/>
 
 </launch>
