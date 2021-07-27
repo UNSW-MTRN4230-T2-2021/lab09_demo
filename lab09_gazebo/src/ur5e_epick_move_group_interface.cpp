@@ -58,8 +58,8 @@ constexpr auto deg_to_rad(double deg) -> double {
     return deg * pi/180.0;
 }
 
-auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> std::string;
-auto delete_box(ros::NodeHandle n, std::string name) -> bool;
+auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> bool;
+auto delete_box(ros::NodeHandle n) -> bool;
 
 static const std::string model_path = "/home/mtrn4230/lab_demo_repos/lab09_demo/lab09_gazebo/models/box/box.sdf";
 
@@ -73,12 +73,17 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "lab09_demo");
     auto nh = ros::NodeHandle{};
 
-    ros::ServiceClient onClient = nh.serviceClient<std_srvs::Empty>("/ur5e_epick/epick/on");
-    ros::ServiceClient offClient = nh.serviceClient<std_srvs::Empty>("/ur5e_epick/epick/off");
+    ros::ServiceClient onClient = nh.serviceClient<std_srvs::Empty>("/ur5e/epick/on");
+    ros::ServiceClient offClient = nh.serviceClient<std_srvs::Empty>("/ur5e/epick/off");
     std_srvs::Empty srv;
 
     auto spinner = ros::AsyncSpinner(1);
     spinner.start();
+
+    // ##### ensure gripper off and no box spawned #####
+    offClient.call(srv);
+    delete_box(nh);
+
 
     //  ##### MoveIt! setup #####
     auto move_group = moveit::planning_interface::MoveGroupInterface(PLANNING_GROUP);
@@ -109,26 +114,10 @@ int main(int argc, char** argv)
     ROS_INFO("Move to a \"named\" configuration (named in the srdf)");
 
     // Options are currently, "zero", "home" and "up"
-    auto group_state = "zero";
-    auto success = false;
-    // move_group.setNamedTarget(group_state);
-
-    // // Check if plan is possible
-    // auto success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    // if(!success) {
-    //     ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
-    //     return 1;
-    // }
-
-    // // Execute motion to zero position
-    // ROS_INFO("Found path to %s, moving robot...", group_state);
-    // move_group.move();
-
-    group_state = "home";
+    auto group_state = "home";
     move_group.setNamedTarget(group_state);
-
     // Check if plan is possible
-    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    auto success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if(!success) {
         ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
         return 1;
@@ -177,25 +166,25 @@ int main(int argc, char** argv)
 
 
 
-//     // ##### Move through various named positions #####
-//     ROS_INFO("Move through various named positions");
-//     auto group_states = std::vector<std::string>{"zero", "home", "above_table", "home", "up"};
+    // ##### Move through various named positions #####
+    ROS_INFO("Move through various named positions");
+    auto group_states = std::vector<std::string>{"zero", "home", "above_table", "up"};
 
-//     // Loop through states
-//     for(auto const & state : group_states) {
-//         move_group.setNamedTarget(state);
+    // Loop through states
+    for(auto const & state : group_states) {
+        move_group.setNamedTarget(state);
 
-//         // Check if plan is possible
-//         success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-//         if(!success) {
-//             ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", state.c_str());
-//             return 1;
-//         }
+        // Check if plan is possible
+        success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+        if(!success) {
+            ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", state.c_str());
+            return 1;
+        }
 
-//         // Execute motion to set position
-//         ROS_INFO("Found path to %s, moving robot...", state.c_str());
-//         move_group.move();
-//     }
+        // Execute motion to set position
+        ROS_INFO("Found path to %s, moving robot...", state.c_str());
+        move_group.move();
+    }
 
     // ##### Move to home #####
     group_state = "home";
@@ -225,72 +214,12 @@ int main(int argc, char** argv)
 
     box_pose.orientation = tf2::toMsg(myQuaternion);
 
-    auto const box_name = spawn_box(nh,box_pose);
-
-    // ##### gripper on #####
-    // onClient.call(srv);
-
-    for(int i = 0; i < 4; ++i) {
-        // ##### Move to table #####
-        group_state = "above_table";
-        move_group.setNamedTarget(group_state);
-
-        // Check if plan is possible
-        success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-        if(!success) {
-            ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", group_state);
-            return 1;
-        }
-
-        move_group.setMaxVelocityScalingFactor(0.01);
-        // Execute motion to set position
-        ROS_INFO("Found path to %s, moving robot...", group_state);
-        move_group.move();
-
-        move_group.getCurrentState()->copyJointGroupPositions(joint_model_group, joint_group_positions);
-        joint_group_positions[1] += deg_to_rad(i/2.0);  // shoulder_lift_joint
-        move_group.setJointValueTarget(joint_group_positions);
-        success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-        if(!success) {
-            ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", group_state);
-            return 1;
-        }
-
-        // Execute motion to set position
-        ROS_INFO("Found path to %s, moving robot...", group_state);
-        move_group.move();
-
-        offClient.call(srv);
-        onClient.call(srv);
-        ros::Duration(0.1).sleep();
-
-        move_group.getCurrentState()->copyJointGroupPositions(joint_model_group, joint_group_positions);
-        joint_group_positions[1] -= deg_to_rad(5);  // shoulder_lift_joint
-        move_group.setJointValueTarget(joint_group_positions);
-
-        success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-        if(!success) {
-            ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", group_state);
-            return 1;
-        }
-
-        // Execute motion to set position
-        ROS_INFO("Found path to %s, moving robot...", group_state);
-        move_group.move();
-
-        std::cout << "down " << i/2.0 << " deg\n";
-        auto respawn = false;
-        std::cin >> respawn;
-        if(respawn){
-            delete_box(nh, box_name);
-            spawn_box(nh, box_pose);
-        }
-
+    if(!spawn_box(nh,box_pose)) {
+        return 1;
     }
 
-
-    // ##### Move to home #####
-    group_state = "home";
+    // ##### Move to table #####
+    group_state = "above_table";
     move_group.setNamedTarget(group_state);
 
     // Check if plan is possible
@@ -302,6 +231,30 @@ int main(int argc, char** argv)
 
     // Execute motion to set position
     ROS_INFO("Found path to %s, moving robot...", group_state);
+    move_group.move();
+
+
+    // ##### gripper on #####
+    onClient.call(srv);
+
+
+    // ##### Move up slightly #####
+
+    move_group.getCurrentState()->copyJointGroupPositions(joint_model_group, joint_group_positions);
+
+    joint_group_positions[1] -= deg_to_rad(3);  // shoulder_lift_joint
+    move_group.setJointValueTarget(joint_group_positions);
+
+    move_group.setMaxVelocityScalingFactor(0.05);
+
+    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) {
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
+        return 1;
+    }
+
+    // Execute motion to set position
+    ROS_INFO("Found path, moving robot...");
     move_group.move();
 
 
@@ -322,17 +275,31 @@ int main(int argc, char** argv)
     move_group.move();
 
 
+    // ##### Move down slightly #####
 
-    // down a bit
+    move_group.getCurrentState()->copyJointGroupPositions(joint_model_group, joint_group_positions);
+    joint_group_positions[1] += deg_to_rad(5);  // shoulder_lift_joint
+    move_group.setJointValueTarget(joint_group_positions);
 
-    // gripper off
+    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) {
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
+        return 1;
+    }
+
+    // Execute motion to set position
+    ROS_INFO("Found path, moving robot...");
+    move_group.move();
+
+
+    // ##### gripper off #####
     offClient.call(srv);
-
 
 
     // ##### Move to home #####
     group_state = "home";
     move_group.setNamedTarget(group_state);
+    move_group.setMaxVelocityScalingFactor(1);
 
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if(!success) {
@@ -343,20 +310,22 @@ int main(int argc, char** argv)
     // Execute motion
     move_group.move();
 
-    std::cin.ignore();
-    delete_box(nh, box_name);
+
+    delete_box(nh);
 
     ros::shutdown();
     return 0;
 }
 
-auto delete_box(ros::NodeHandle n, std::string name) -> bool {
+auto const box_name = "spawnedBox";
+
+auto delete_box(ros::NodeHandle n) -> bool {
 
     ros::ServiceClient deleteModel = n.serviceClient<gazebo_msgs::DeleteModel>("gazebo/delete_model");
     deleteModel.waitForExistence();
     gazebo_msgs::DeleteModel srv;
 
-    srv.request.model_name = name;
+    srv.request.model_name = box_name;
 
     deleteModel.call(srv);
 
@@ -364,13 +333,13 @@ auto delete_box(ros::NodeHandle n, std::string name) -> bool {
 }
 
 // Author: Max Kelly
-auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> std::string {
+auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> bool {
 
     ros::ServiceClient spawnModel = n.serviceClient<gazebo_msgs::SpawnModel>("gazebo/spawn_sdf_model");
     spawnModel.waitForExistence();
     gazebo_msgs::SpawnModel srv;
 
-    srv.request.model_name = "spawnedCubeCpp";
+    srv.request.model_name = box_name;
 
     // load sdf file
     std::ifstream ifs;
@@ -385,6 +354,6 @@ auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> std::string {
     srv.request.reference_frame = "world";
 
     spawnModel.call(srv);
-    return srv.request.model_name;
+    return srv.response.success;
 }
 
