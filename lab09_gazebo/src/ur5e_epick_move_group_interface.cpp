@@ -36,8 +36,6 @@
 
 // This is for interfacing with Moveit move group
 #include <moveit/move_group_interface/move_group_interface.h>
-// #include <moveit/planning_interface/move_group_interface.h>
-// #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 // These are for the various ROS message formats we need
 #include <moveit_msgs/DisplayRobotState.h>
@@ -45,277 +43,280 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-// #include <moveit_msgs/AttachedCollisionObject.h>
-// #include <moveit_msgs/CollisionObject.h>
+constexpr double pi = 3.1415926535;
+
+constexpr auto deg_to_rad(double deg) -> double {
+    return deg * pi/180.0;
+}
+
+/* The planning group can be found in the ur5e_epick_moveit_config/config/ur5e.srdf */
+static const std::string PLANNING_GROUP = "manipulator";
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "move_group_interface_tutorial");
-  auto nh = ros::NodeHandle{};
-  auto spinner = ros::AsyncSpinner(1);
-  spinner.start();
+    //  ##### ROS setup #####
 
-  std::cout << "Hit enter to start";
-  std::cin.ignore();
+    ros::init(argc, argv, "move_group_interface_tutorial");
+    auto nh = ros::NodeHandle{};
+    auto spinner = ros::AsyncSpinner(1);
+    spinner.start();
 
-  /* The planning group can be found in the ur5e_epick_moveit_config/config/ur5e.srdf */
-  static const std::string PLANNING_GROUP = "manipulator";
+    //  ##### MoveIt! setup #####
+    auto move_group = moveit::planning_interface::MoveGroupInterface(PLANNING_GROUP);
 
-  auto move_group = moveit::planning_interface::MoveGroupInterface(PLANNING_GROUP);
+    auto const* joint_model_group = move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
 
-  // auto planning_scene_interface = moveit::planning_interface::PlanningSceneInterface();
-  // auto planning_scene_interface = moveit::planning_interface::PlanningSceneInterface();
+    auto my_plan = moveit::planning_interface::MoveGroupInterface::Plan{};
 
-  auto const* joint_model_group = move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
 
-  // We can print the name of the reference frame for this robot.
-  ROS_INFO_NAMED("lab09", "Planning frame: %s", move_group.getPlanningFrame().c_str());
+    //  ##### State logging #####
 
-  // We can also print the name of the end-effector link for this group.
-  ROS_INFO_NAMED("lab09", "End effector link: %s", move_group.getEndEffectorLink().c_str());
+    // We can print the name of the reference frame for this robot.
+    ROS_INFO("Planning frame: %s", move_group.getPlanningFrame().c_str());
 
-  // We can get a list of all the groups in the robot:
-  ROS_INFO_NAMED("lab09", "Available Planning Groups:");
-  std::copy(move_group.getJointModelGroupNames().begin(), move_group.getJointModelGroupNames().end(),
-            std::ostream_iterator<std::string>(std::cout, ", "));
+    // We can also print the name of the end-effector link for this group.
+    ROS_INFO("End effector link: %s", move_group.getEndEffectorLink().c_str());
 
-  // Get starting pose
-  robot_state::RobotState start_state(*move_group.getCurrentState());
+    // We can get a list of all the groups in the robot:
+    {
+        auto groups_str = std::string{};
+        for(auto const & group : move_group.getJointModelGroupNames()) {
+            groups_str += group + ", ";
+        }
+        ROS_INFO("Available Planning Groups: %s", groups_str.c_str());
+    }
 
-  // Generate target pose
-  geometry_msgs::Pose target_pose1;
-  target_pose1.position.x = 0.28;
-  target_pose1.position.y = -0.2;
-  target_pose1.position.z = 0.5;
+    // Print starting pose
+    // move_group.getCurrentState()->printStateInfo();
 
-  tf2::Quaternion quat;
-  quat.setRPY(0,0,0);
-  target_pose1.orientation = tf2::toMsg(quat);
+    // ##### Move to a "named" configuration (named in the srdf) #####
+    ROS_INFO("Move to a \"named\" configuration (named in the srdf)");
 
-  move_group.setPoseTarget(target_pose1);
+    // Options are currently, "zero", "home" and "up"
+    auto group_state = "zero";
+    move_group.setNamedTarget(group_state);
 
-  auto my_plan = moveit::planning_interface::MoveGroupInterface::Plan{};
+    // Check if plan is possible
+    auto success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) {
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
+        return 1;
+    }
 
-  auto success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-  if(!success) {
-      ROS_WARN("Unable to plan path. Rerun or adjust target pose or planning parameters");
-      return 1;
-  }
+    // Execute motion to zero position
+    ROS_INFO("Found path to %s, moving robot...", group_state);
+    move_group.move();
 
-  // Execute motion
-  move_group.move();
 
-  auto current_state = move_group.getCurrentState();
+    // ##### Move to a specific joint configuration #####
+    ROS_INFO("Move to a specific joint configuration ");
 
-  auto joint_group_positions = std::vector<double>{};
-  current_state->copyJointGroupPositions(joint_model_group, joint_group_positions);
+    auto joint_group_positions = std::vector<double>{};
+    // ensure the vector has a joint position for each joint
+    move_group.getCurrentState()->copyJointGroupPositions(joint_model_group, joint_group_positions);
 
-  // Now, let's modify one of the joints, plan to the new joint space goal and visualize the plan.
-  joint_group_positions[0] = -1.0;  // radians
-  move_group.setJointValueTarget(joint_group_positions);
+    // Now, let's set it to the approximate home position
+    joint_group_positions[0] = deg_to_rad(   0);  // shoulder_pan_joint
+    joint_group_positions[1] = deg_to_rad( -75);  // shoulder_lift_joint
+    joint_group_positions[2] = deg_to_rad(  90);  // elbow_joint
+    joint_group_positions[3] = deg_to_rad(-105);  // wrist_1_joint
+    joint_group_positions[4] = deg_to_rad( -90);  // wrist_2_joint
+    joint_group_positions[5] = deg_to_rad(   0);  // wrist_3_joint
 
-  success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-  ROS_INFO_NAMED("tutorial", "Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
-  move_group.move();
+    // Set joint configuration as target
+    move_group.setJointValueTarget(joint_group_positions);
 
-  //moveit_msgs::OrientationConstraint ocm;
-  //ocm.link_name = "tool0";
-  //ocm.header.frame_id = "base_link";
-  //ocm.orientation.w = 1.0;
-  //ocm.absolute_x_axis_tolerance = 0.1;
-  //ocm.absolute_y_axis_tolerance = 0.1;
-  //ocm.absolute_z_axis_tolerance = 0.1;
-  //ocm.weight = 1.0;
+    // Check if plan is possible
+    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) {
+        ROS_WARN("Unable to plan path. Rerun or adjust target pose or planning parameters");
+        return 1;
+    }
 
-  //// Now, set it as the path constraint for the group.
-  //moveit_msgs::Constraints test_constraints;
-  //test_constraints.orientation_constraints.push_back(ocm);
-  //move_group.setPathConstraints(test_constraints);
+    // Execute motion
+    ROS_INFO("Found path to given joint config, moving robot...");
+    move_group.move();
 
-  //// We will reuse the old goal that we had and plan to it.
-  //// Note that this will only work if the current state already
-  //// satisfies the path constraints. So, we need to set the start
-  //// state to a new pose.
-  //robot_state::RobotState start_state(*move_group.getCurrentState());
-  //geometry_msgs::Pose start_pose2;
-  //start_pose2.orientation.w = -1.0;
-  //start_pose2.position.x = 0.55;
-  //start_pose2.position.y = -0.05;
-  //start_pose2.position.z = 0.8;
-  //start_state.setFromIK(joint_model_group, start_pose2);
-  //move_group.setStartState(start_state);
 
-  //// Now we will plan to the earlier pose target from the new
-  //// start state that we have just created.
-  //move_group.setPoseTarget(target_pose1);
+    // ##### Move to an adjusted joint configuration #####
+    ROS_INFO("Move to an adjusted joint configuration");
 
-  //// Planning with constraints can be slow because every sample must call an inverse kinematics solver.
-  //// Lets increase the planning time from the default 5 seconds to be sure the planner has enough time to succeed.
-  //move_group.setPlanningTime(10.0);
+    // Set sholder_pan_joint to 90 deg
+    move_group.setJointValueTarget("shoulder_pan_joint", deg_to_rad(90));
 
-  //success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-  //ROS_INFO_NAMED("tutorial", "Visualizing plan 3 (constraints) %s", success ? "" : "FAILED");
+    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) {
+        ROS_WARN("Unable to plan path. Rerun or adjust target pose or planning parameters");
+        return 1;
+    }
 
-  //// Visualize the plan in RViz
-  //visual_tools.deleteAllMarkers();
-  //visual_tools.publishAxisLabeled(start_pose2, "start");
-  //visual_tools.publishAxisLabeled(target_pose1, "goal");
-  //visual_tools.publishText(text_pose, "Constrained Goal", rvt::WHITE, rvt::XLARGE);
-  //visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
-  //visual_tools.trigger();
-  //visual_tools.prompt("next step");
+    // Execute motion
+    move_group.move();
 
-  //// When done with the path constraint be sure to clear it.
-  //move_group.clearPathConstraints();
 
-  //// Cartesian Paths
-  //// ^^^^^^^^^^^^^^^
-  //// You can plan a Cartesian path directly by specifying a list of waypoints
-  //// for the end-effector to go through. Note that we are starting
-  //// from the new start state above.  The initial pose (start state) does not
-  //// need to be added to the waypoint list but adding it can help with visualizations
-  //std::vector<geometry_msgs::Pose> waypoints;
-  //waypoints.push_back(start_pose2);
 
-  //geometry_msgs::Pose target_pose3 = start_pose2;
+    // ##### Save a record of the current pose for later reference #####
+    ROS_INFO("Save a record of the current pose for later reference");
 
-  //target_pose3.position.z -= 0.2;
-  //waypoints.push_back(target_pose3);  // down
+    move_group.rememberJointValues("new_home");
 
-  //target_pose3.position.y -= 0.2;
-  //waypoints.push_back(target_pose3);  // right
 
-  //target_pose3.position.z += 0.2;
-  //target_pose3.position.y += 0.2;
-  //target_pose3.position.x -= 0.2;
-  //waypoints.push_back(target_pose3);  // up and left
+    // ##### Move through various named positions #####
+    ROS_INFO("Move through various named positions");
+    // auto group_states = std::vector<std::string>{"zero", "new_home", "up", "home"};
+    auto group_states = std::vector<std::string>{"home"};
 
-  //// Cartesian motions are frequently needed to be slower for actions such as approach and retreat
-  //// grasp motions. Here we demonstrate how to reduce the speed of the robot arm via a scaling factor
-  //// of the maxiumum speed of each joint. Note this is not the speed of the end effector point.
-  //move_group.setMaxVelocityScalingFactor(0.1);
+    // Loop through states
+    for(auto const & state : group_states) {
+        move_group.setNamedTarget(state);
 
-  //// We want the Cartesian path to be interpolated at a resolution of 1 cm
-  //// which is why we will specify 0.01 as the max step in Cartesian
-  //// translation.  We will specify the jump threshold as 0.0, effectively disabling it.
-  //// Warning - disabling the jump threshold while operating real hardware can cause
-  //// large unpredictable motions of redundant joints and could be a safety issue
-  //moveit_msgs::RobotTrajectory trajectory;
-  //const double jump_threshold = 0.0;
-  //const double eef_step = 0.01;
-  //double fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-  //ROS_INFO_NAMED("tutorial", "Visualizing plan 4 (Cartesian path) (%.2f%% acheived)", fraction * 100.0);
+        // Check if plan is possible
+        success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+        if(!success) {
+            ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", state.c_str());
+            return 1;
+        }
 
-  //// Visualize the plan in RViz
-  //visual_tools.deleteAllMarkers();
-  //visual_tools.publishText(text_pose, "Joint Space Goal", rvt::WHITE, rvt::XLARGE);
-  //visual_tools.publishPath(waypoints, rvt::LIME_GREEN, rvt::SMALL);
-  //for (std::size_t i = 0; i < waypoints.size(); ++i)
-  //  visual_tools.publishAxisLabeled(waypoints[i], "pt" + std::to_string(i), rvt::SMALL);
-  //visual_tools.trigger();
-  //visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to continue the demo");
+        // Execute motion to set position
+        ROS_INFO("Found path to %s, moving robot...", state.c_str());
+        move_group.move();
+    }
 
-  //// Adding/Removing Objects and Attaching/Detaching Objects
-  //// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  ////
-  //// Define a collision object ROS message.
-  //moveit_msgs::CollisionObject collision_object;
-  //collision_object.header.frame_id = move_group.getPlanningFrame();
+    auto pose = move_group.getCurrentPose().pose;
+    std::cout << pose.position.x << " " << pose.position.y << " " << pose.position.z << "\n";
+    for(auto const& rad : move_group.getCurrentRPY()) {
+        std::cout << rad*180/pi << " ";
+    }
+    std::cout << "\n";
 
-  //// The id of the object is used to identify it.
-  //collision_object.id = "box1";
+    // move_group.getCurrentState()->printStateInfo();
 
-  //// Define a box to add to the world.
-  //shape_msgs::SolidPrimitive primitive;
-  //primitive.type = primitive.BOX;
-  //primitive.dimensions.resize(3);
-  //primitive.dimensions[0] = 0.4;
-  //primitive.dimensions[1] = 0.1;
-  //primitive.dimensions[2] = 0.4;
+    // move_group.setRPYTarget(-pi,0,0);
 
-  //// Define a pose for the box (specified relative to frame_id)
-  //geometry_msgs::Pose box_pose;
-  //box_pose.orientation.w = 1.0;
-  //box_pose.position.x = 0.4;
-  //box_pose.position.y = -0.2;
-  //box_pose.position.z = 1.0;
+    // success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    // if(!success) {
+    //     ROS_WARN("Unable to plan path to RPY. Ensure goal pose is valid or adjust tolerance");
+    //     return 1;
+    // }
 
-  //collision_object.primitives.push_back(primitive);
-  //collision_object.primitive_poses.push_back(box_pose);
-  //collision_object.operation = collision_object.ADD;
+    // // Execute motion to set position
+    // ROS_INFO("Found path to RPY, moving robot...");
+    // move_group.move();
 
-  //std::vector<moveit_msgs::CollisionObject> collision_objects;
-  //collision_objects.push_back(collision_object);
 
-  //// Now, let's add the collision object into the world
-  //ROS_INFO_NAMED("tutorial", "Add an object into the world");
-  //planning_scene_interface.addCollisionObjects(collision_objects);
 
-  //// Show text in RViz of status
-  //visual_tools.publishText(text_pose, "Add object", rvt::WHITE, rvt::XLARGE);
-  //visual_tools.trigger();
 
-  //// Wait for MoveGroup to recieve and process the collision object message
-  //visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to once the collision object appears in RViz");
 
-  //// Now when we plan a trajectory it will avoid the obstacle
-  //move_group.setStartState(*move_group.getCurrentState());
-  //geometry_msgs::Pose another_pose;
-  //another_pose.orientation.w = 1.0;
-  //another_pose.position.x = 0.4;
-  //another_pose.position.y = -0.4;
-  //another_pose.position.z = 0.9;
-  //move_group.setPoseTarget(another_pose);
+    // moveit_msgs::OrientationConstraint ocm;
+    // // ocm.link_name = "epick_end_effector";
+    // ocm.link_name = "tool0";
+    // ocm.header.frame_id = "base_link";
+    // ocm.orientation.x = -0.000351;
+    // ocm.orientation.y = 0.703390;
+    // ocm.orientation.z = 0.000134;
+    // ocm.orientation.w = 0.710804;
+    // // ocm.orientation = move_group.getCurrentPose().pose.orientation;
+    // ocm.absolute_x_axis_tolerance = 0.1;
+    // ocm.absolute_y_axis_tolerance = 0.1;
+    // ocm.absolute_z_axis_tolerance = 0.1;
+    // ocm.weight = 1.0;
 
-  //success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-  //ROS_INFO_NAMED("tutorial", "Visualizing plan 5 (pose goal move around cuboid) %s", success ? "" : "FAILED");
+    // std::cout << ocm.orientation;
+    // // Now, set it as the path constraint for the group.
+    // moveit_msgs::Constraints test_constraints;
+    // test_constraints.orientation_constraints.push_back(ocm);
+    // move_group.setPathConstraints(test_constraints);
 
-  //// Visualize the plan in RViz
-  //visual_tools.deleteAllMarkers();
-  //visual_tools.publishText(text_pose, "Obstacle Goal", rvt::WHITE, rvt::XLARGE);
-  //visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
-  //visual_tools.trigger();
-  //visual_tools.prompt("next step");
+    // // We will reuse the old goal that we had and plan to it.
+    // // Note that this will only work if the current state already
+    // // satisfies the path constraints. So, we need to set the start
+    // // state to a new pose.
+    // robot_state::RobotState start_state(*move_group.getCurrentState());
+    // geometry_msgs::Pose start_pose2;
+    // start_pose2.orientation.w = -1.0;
+    // start_pose2.position.x = 0.55;
+    // start_pose2.position.y = -0.35;
+    // start_pose2.position.z = 0.5;
+    // move_group.setStartState(*move_group.getCurrentState());
 
-  //// Now, let's attach the collision object to the robot.
-  //ROS_INFO_NAMED("tutorial", "Attach the object to the robot");
-  //move_group.attachObject(collision_object.id);
+    // Now we will plan to the earlier pose target from the new
+    // start state that we have just created.
+    // move_group.setPoseTarget(move_group.getCurrentPose().pose);
 
-  //// Show text in RViz of status
-  //visual_tools.publishText(text_pose, "Object attached to robot", rvt::WHITE, rvt::XLARGE);
-  //visual_tools.trigger();
+    // Planning with constraints can be slow because every sample must call an inverse kinematics solver.
+    // Lets increase the planning time from the default 5 seconds to be sure the planner has enough time to succeed.
+    // move_group.setPlanningTime(10.0);
 
-  ///* Wait for MoveGroup to recieve and process the attached collision object message */
-  //visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to once the collision object attaches to the "
-  //                    "robot");
+//     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+//     if(!success) {
+//         ROS_WARN("Unable to plan path. Rerun or adjust target pose or planning parameters");
+//         return 1;
+//     }
 
-  //// Now, let's detach the collision object from the robot.
-  //ROS_INFO_NAMED("tutorial", "Detach the object from the robot");
-  //move_group.detachObject(collision_object.id);
+//     // Execute motion
+//     move_group.move();
 
-  //// Show text in RViz of status
-  //visual_tools.publishText(text_pose, "Object dettached from robot", rvt::WHITE, rvt::XLARGE);
-  //visual_tools.trigger();
+    //// Visualize the plan in RViz
+    //visual_tools.deleteAllMarkers();
+    //visual_tools.publishAxisLabeled(start_pose2, "start");
+    //visual_tools.publishAxisLabeled(target_pose1, "goal");
+    //visual_tools.publishText(text_pose, "Constrained Goal", rvt::WHITE, rvt::XLARGE);
+    //visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
+    //visual_tools.trigger();
+    //visual_tools.prompt("next step");
 
-  ///* Wait for MoveGroup to recieve and process the attached collision object message */
-  //visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to once the collision object detaches to the "
-  //                    "robot");
+    //// When done with the path constraint be sure to clear it.
+    //move_group.clearPathConstraints();
 
-  //// Now, let's remove the collision object from the world.
-  //ROS_INFO_NAMED("tutorial", "Remove the object from the world");
-  //std::vector<std::string> object_ids;
-  //object_ids.push_back(collision_object.id);
-  //planning_scene_interface.removeCollisionObjects(object_ids);
+    // Cartesian Paths
+    // ^^^^^^^^^^^^^^^
+    // You can plan a Cartesian path directly by specifying a list of waypoints
+    // for the end-effector to go through. Note that we are starting
+    // from the new start state above.  The initial pose (start state) does not
+    // need to be added to the waypoint list but adding it can help with visualizations
+    std::vector<geometry_msgs::Pose> waypoints;
+    // waypoints.push_back(start_pose2);
 
-  //// Show text in RViz of status
-  //visual_tools.publishText(text_pose, "Object removed", rvt::WHITE, rvt::XLARGE);
-  //visual_tools.trigger();
+    geometry_msgs::Pose target_pose = move_group.getCurrentPose().pose;
+    waypoints.push_back(target_pose);  // start
 
-  ///* Wait for MoveGroup to recieve and process the attached collision object message */
-  //visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to once the collision object disapears");
+    target_pose.position.z -= 0.05;
+    waypoints.push_back(target_pose);  // down
 
-  //// END_TUTORIAL
+    target_pose.position.y -= 0.2;
+    waypoints.push_back(target_pose);  // right
 
-  ros::shutdown();
-  return 0;
+    waypoints.push_back(move_group.getCurrentPose().pose);  // start
+
+    // Cartesian motions are frequently needed to be slower for actions such as approach and retreat
+    // grasp motions. Here we demonstrate how to reduce the speed of the robot arm via a scaling factor
+    // of the maxiumum speed of each joint. Note this is not the speed of the end effector point.
+    move_group.setMaxVelocityScalingFactor(0.1);
+
+    // We want the Cartesian path to be interpolated at a resolution of 1 cm
+    // which is why we will specify 0.01 as the max step in Cartesian
+    // translation.  We will specify the jump threshold as 0.0, effectively disabling it.
+    // Warning - disabling the jump threshold while operating real hardware can cause
+    // large unpredictable motions of redundant joints and could be a safety issue
+    moveit_msgs::RobotTrajectory trajectory;
+    const double jump_threshold = 0.0;
+    const double eef_step = 0.01;
+    double fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    ROS_INFO("Cartesian path planned (%.2f%% acheived)", fraction * 100.0);
+
+    // Execute motion through trajectory
+    ROS_INFO("Found path through trajectory, moving robot...");
+    move_group.execute(trajectory);
+
+    //// Visualize the plan in RViz
+    //visual_tools.deleteAllMarkers();
+    //visual_tools.publishText(text_pose, "Joint Space Goal", rvt::WHITE, rvt::XLARGE);
+    //visual_tools.publishPath(waypoints, rvt::LIME_GREEN, rvt::SMALL);
+    //for (std::size_t i = 0; i < waypoints.size(); ++i)
+    //  visual_tools.publishAxisLabeled(waypoints[i], "pt" + std::to_string(i), rvt::SMALL);
+    //visual_tools.trigger();
+    //visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to continue the demo");
+
+    ros::shutdown();
+    return 0;
 }
