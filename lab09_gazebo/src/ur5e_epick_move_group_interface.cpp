@@ -311,7 +311,7 @@ int main(int argc, char** argv)
     move_group.move();
 
 
-    delete_box(nh);
+    // delete_box(nh);
 
     ros::shutdown();
     return 0;

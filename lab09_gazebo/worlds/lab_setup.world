@@ -11,7 +11,7 @@
 
         <gravity>0 0 -9.81</gravity>
 
-        <!-- TODO: Validate these + does smaller == faster? --> 
+        <!-- TODO: Validate these + does smaller == faster? -->
         <physics name="default_physics" default="0" type="ode">
             <max_step_size>0.001</max_step_size>
             <real_time_factor>1</real_time_factor>
