@@ -445,7 +445,7 @@
       </material>
     </collision>  -->
     </link>
-    <joint name="epick_end_effector_joint" type="fixed">
+    <joint name="epick_end_effector_joint" type="revolute">
         <axis xyz="1 0 0" />
         <parent link="epick" />
         <child link="epick_end_effector" />
