@@ -9,7 +9,7 @@
         <bodyName>epick_end_effector</bodyName>
         <topicName>grasping</topicName>
         <maxForce>150</maxForce>
-        <maxDistance>0.03</maxDistance>
+        <maxDistance>0.02</maxDistance>
         <minDistance>0.01</minDistance>
       </plugin>
     </gazebo>

@@ -73,8 +73,8 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "lab09_demo");
     auto nh = ros::NodeHandle{};
 
-    ros::ServiceClient onClient = nh.serviceClient<std_srvs::Empty>("/ur5e/epick/on");
-    ros::ServiceClient offClient = nh.serviceClient<std_srvs::Empty>("/ur5e/epick/off");
+    ros::ServiceClient onClient = nh.serviceClient<std_srvs::Empty>("/ur5e_epick/epick/on");
+    ros::ServiceClient offClient = nh.serviceClient<std_srvs::Empty>("/ur5e_epick/epick/off");
     std_srvs::Empty srv;
 
     auto spinner = ros::AsyncSpinner(1);

@@ -75,5 +75,5 @@
     </inertial>
   </link>
 
-  <xacro:epick_hand_gazebo robot_name="ur5e" />
+  <xacro:epick_hand_gazebo robot_name="ur5e_epick" />
 </robot>
