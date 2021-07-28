@@ -310,7 +310,9 @@ int main(int argc, char** argv)
     // Execute motion
     move_group.move();
 
-
+    // Delete box from Gazebo
+    // Currently commented out so the box can be seen after the program finishes.
+    // The box will be deleted when this node is started again
     // delete_box(nh);
 
     ros::shutdown();
