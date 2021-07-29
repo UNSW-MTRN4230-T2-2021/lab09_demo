@@ -52,7 +52,8 @@ off across the table.
 
 It uses a new MoveIt! configuration generated for the UR5e + epick combination.
 
-More details to come...
+For a walk through of the code, you can watch a recording of Luke demoing the code and explaining it here: 
+https://web.microsoftstream.com/video/046cebde-3e94-4e5f-aeae-936956d3b2ce
 
 ## Issues and limitations
 
