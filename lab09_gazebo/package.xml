@@ -19,5 +19,10 @@
 
     <exec_depend>moveit_core</exec_depend>
     <exec_depend>moveit_ros_planning_interface</exec_depend>
-
+    <exec_depend>gazebo_ros</exec_depend>
+    
+    <export>
+        <gazebo_ros gazebo_model_path="${prefix}/models"/>
+        <gazebo_ros gazebo_plugin_path="${prefix}/models" gazebo_media_path="${prefix}/models" />
+    </export>
 </package>
