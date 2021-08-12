@@ -128,7 +128,6 @@ int main(int argc, char** argv)
     ROS_INFO("Found path to %s, moving robot...", group_state);
     move_group.move();
 
-    
     // ##### Move to a specific joint configuration #####
     ROS_INFO("Move to a specific joint configuration ");
 
@@ -362,4 +361,3 @@ auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> bool {
     spawnModel.call(srv);
     return srv.response.success;
 }
-
