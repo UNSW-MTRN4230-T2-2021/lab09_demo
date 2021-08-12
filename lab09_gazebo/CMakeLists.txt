@@ -32,3 +32,6 @@ include_directories(${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${EIGEN3_INCLUDE
 add_executable(${PROJECT_NAME}_moveit src/ur5e_epick_move_group_interface.cpp)
 target_link_libraries(${PROJECT_NAME}_moveit ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
+add_executable(cartesian_movement src/cartesian_movement.cpp)
+target_link_libraries(cartesian_movement ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+

@@ -14,7 +14,6 @@ mkdir -p ~/lab_demo_repos && cd ~/lab_demo_repos/
 git clone git@github.com:UNSW-MTRN4230-T2-2021/lab09_demo
 ```
 
-
 Link the packages into the workspace
 
 ```bash
@@ -42,10 +41,16 @@ commands for the UR5e and the epick vacuum gripper.
 roslaunch lab09_gazebo demo.launch
 ```
 
-In a new terminal tab:
+In a new terminal tab (joint based movement):
 
 ```bash
 rosrun lab09_gazebo lab09_gazebo_moveit
+```
+
+or otherwise in a new terminal run (cartesian based movement):
+
+```
+rosrun lab09_gazebo cartesian_movement
 ```
 
 ## About the code
@@ -57,7 +62,7 @@ off across the table.
 
 It uses a new MoveIt! configuration generated for the UR5e + epick combination.
 
-For a walk through of the code, you can watch a recording of Luke demoing the code and explaining it here: 
+For a walk through of the code, you can watch a recording of Luke demoing the code and explaining it here:
 https://web.microsoftstream.com/video/046cebde-3e94-4e5f-aeae-936956d3b2ce
 
 ## Issues and limitations
@@ -105,16 +110,16 @@ so that it is more dynamic.
 Some possible extensions include:
 
 1. Create a service or set of services that takes in for example a group name,
-joint configuration, or joint name and value and moves the robot to that location.
-Change the node code so that it uses this service instead.
-1. Create a service that can save the current configuration of the robot to a name
-based on a given string and use this in the program instead of doing it manually.
-1. Add cartesian motion to the program rather than moving to specific joint
-configurations.
-1. Add constraints on the robot so that it won't try to plan a path through the table.
-1. Reset the world to a sane state if the robot collides with the table and
-becomes unrecoverable.
-1. Spawn boxes (or other shapes) with unique names and track these names for deletion.
+   joint configuration, or joint name and value and moves the robot to that location.
+   Change the node code so that it uses this service instead.
+2. Create a service that can save the current configuration of the robot to a name
+   based on a given string and use this in the program instead of doing it manually.
+3. Add cartesian motion to the program rather than moving to specific joint
+   configurations.
+4. Add constraints on the robot so that it won't try to plan a path through the table.
+5. Reset the world to a sane state if the robot collides with the table and
+   becomes unrecoverable.
+6. Spawn boxes (or other shapes) with unique names and track these names for deletion.
 
 ## (Some of the) Helpful resources I used
 
@@ -131,3 +136,4 @@ Controlling the robot from MoveIt!:
 
 - http://docs.ros.org/en/melodic/api/moveit_tutorials/html/doc/move_group_interface/move_group_interface_tutorial.html
 - http://docs.ros.org/en/melodic/api/moveit_ros_planning_interface/html/classmoveit_1_1planning__interface_1_1MoveGroupInterface.html
+

@@ -61,7 +61,7 @@ constexpr auto deg_to_rad(double deg) -> double {
 auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> bool;
 auto delete_box(ros::NodeHandle n) -> bool;
 
-static const std::string model_path = "/home/mtrn4230/lab_demo_repos/lab09_demo/lab09_gazebo/models/box/box.sdf";
+static const std::string model_path = "/home/raghav/lab_demo_repos/lab09_demo/lab09_gazebo/models/box/box.sdf";
 
 /* The planning group can be found in the ur5e_epick_moveit_config/config/ur5e.srdf */
 static const std::string PLANNING_GROUP = "manipulator";
@@ -127,81 +127,85 @@ int main(int argc, char** argv)
     ROS_INFO("Found path to %s, moving robot...", group_state);
     move_group.move();
 
-    // ##### Move to a specific joint configuration #####
-    ROS_INFO("Move to a specific joint configuration ");
+    ROS_INFO("MOVE TO A POSE GOAL...");
+    geometry_msgs::Pose target_pose1 = move_group.getCurrentPose().pose;
+    target_pose1.position.z -= 0.1;
+    move_group.setPoseTarget(target_pose1);
 
-    auto joint_group_positions = std::vector<double>{};
-    // ensure the vector has a joint position for each joint
-    move_group.getCurrentState()->copyJointGroupPositions(joint_model_group, joint_group_positions);
-
-    // Now, let's set it to a pre-calculated position just above the table
-    joint_group_positions[0] = deg_to_rad(0);       // shoulder_pan_joint
-    joint_group_positions[1] = deg_to_rad(-61.58);  // shoulder_lift_joint
-    joint_group_positions[2] = deg_to_rad(104.42);  // elbow_joint
-    joint_group_positions[3] = deg_to_rad(-132.84); // wrist_1_joint
-    joint_group_positions[4] = deg_to_rad(-90);     // wrist_2_joint
-    joint_group_positions[5] = deg_to_rad(0);       // wrist_3_joint
-
-    // Set joint configuration as target
-    move_group.setJointValueTarget(joint_group_positions);
-
-    // Check if plan is possible
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if(!success) {
-        ROS_WARN("Unable to plan path. Rerun or adjust target pose or planning parameters");
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
         return 1;
     }
 
-    // Execute motion
-    ROS_INFO("Found path to given joint config, moving robot...");
+    ROS_INFO("Found path down 10 cm, moving robot...");
     move_group.move();
 
+    target_pose1 = move_group.getCurrentPose().pose;
+    target_pose1.position.z += 0.1;
+    move_group.setPoseTarget(target_pose1);
 
-
-    // ##### Save a record of the current pose for later reference #####
-    ROS_INFO("Save a record of the current pose for later reference");
-
-    move_group.rememberJointValues("above_table");
-
-
-
-    // ##### Move through various named positions #####
-    ROS_INFO("Move through various named positions");
-    auto group_states = std::vector<std::string>{"zero", "home", "above_table", "up"};
-
-    // Loop through states
-    for(auto const & state : group_states) {
-        move_group.setNamedTarget(state);
-
-        // Check if plan is possible
-        success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-        if(!success) {
-            ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", state.c_str());
-            return 1;
-        }
-
-        // Execute motion to set position
-        ROS_INFO("Found path to %s, moving robot...", state.c_str());
-        move_group.move();
-    }
-
-    // ##### Move to home #####
-    group_state = "home";
-    move_group.setNamedTarget(group_state);
-
-    // Check if plan is possible
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if(!success) {
-        ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", group_state);
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
         return 1;
     }
 
-    // Execute motion to set position
-    ROS_INFO("Found path to %s, moving robot...", group_state);
+    ROS_INFO("Found path up 10 cm, moving robot...");
     move_group.move();
 
+    target_pose1 = move_group.getCurrentPose().pose;
+    target_pose1.position.y += 0.1;
+    move_group.setPoseTarget(target_pose1);
 
-    // ##### Spawn box on table #####
+    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) {
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
+        return 1;
+    }
+
+    ROS_INFO("Found path 10cm in the negative y direction, moving robot...");
+    move_group.move();
+
+    target_pose1 = move_group.getCurrentPose().pose;
+    target_pose1.position.y -= 0.1;
+    move_group.setPoseTarget(target_pose1);
+
+    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) {
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
+        return 1;
+    }
+
+    ROS_INFO("Found path 10 cm in the positive y direction, moving robot...");
+    move_group.move();
+
+    geometry_msgs::Pose start_pose2 =move_group.getCurrentPose().pose;
+    std::vector<geometry_msgs::Pose> waypoints;
+
+    geometry_msgs::Pose target_pose3 = start_pose2;
+
+    target_pose3.position.z -= 0.1;
+    waypoints.push_back(target_pose3);  // down
+
+    target_pose3.position.y -= 0.1;
+    waypoints.push_back(target_pose3);  // right
+
+    target_pose3.position.z += 0.1;
+    target_pose3.position.y += 0.1;
+    target_pose3.position.x -= 0.1;
+    waypoints.push_back(target_pose3);  // up and left
+
+    moveit_msgs::RobotTrajectory trajectory;
+    const double jump_threshold = 0.0;
+    const double eef_step = 0.01;
+    double fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+
+    ROS_INFO("Executing Trajectory");
+    move_group.execute(trajectory);
+
+
+        // ##### Spawn box on table #####
     geometry_msgs::Pose box_pose;
     box_pose.position.x = 0.8 + 0.588; // Origin + offset calculated from URSim
     box_pose.position.y = 0 + 0.133;
@@ -217,34 +221,40 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // ##### Move to table #####
-    group_state = "above_table";
     move_group.setNamedTarget(group_state);
-
     // Check if plan is possible
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if(!success) {
-        ROS_WARN("Unable to plan path to %s. Ensure goal pose is valid or adjust tolerance", group_state);
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
         return 1;
     }
 
-    // Execute motion to set position
+    // Execute motion to home position
     ROS_INFO("Found path to %s, moving robot...", group_state);
     move_group.move();
 
+    target_pose1 = move_group.getCurrentPose().pose;
+    target_pose1.position.z -= 0.15;
+    move_group.setPoseTarget(target_pose1);
 
-    // ##### gripper on #####
+    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if(!success) {
+        ROS_WARN("Unable to plan path. Ensure goal pose is valid or adjust tolerance");
+        return 1;
+    }
+
+    ROS_INFO("Found path down 15 cm, moving robot...");
+    move_group.move();
+
+    ROS_INFO("Turning on the gripper...");
     onClient.call(srv);
 
 
-    // ##### Move up slightly #####
 
-    move_group.getCurrentState()->copyJointGroupPositions(joint_model_group, joint_group_positions);
 
-    joint_group_positions[1] -= deg_to_rad(3);  // shoulder_lift_joint
-    move_group.setJointValueTarget(joint_group_positions);
-
-    move_group.setMaxVelocityScalingFactor(0.05);
+    target_pose1 = move_group.getCurrentPose().pose;
+    target_pose1.position.z += 0.15;
+    move_group.setPoseTarget(target_pose1);
 
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if(!success) {
@@ -252,33 +262,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // Execute motion to set position
-    ROS_INFO("Found path, moving robot...");
+    ROS_INFO("Found path up 15 cm, moving robot...");
     move_group.move();
 
-
-
-    // ##### Move to an adjusted joint configuration #####
-    ROS_INFO("Move to an adjusted joint configuration");
-
-    // Set sholder_pan_joint to 90 deg
-    move_group.setJointValueTarget("shoulder_pan_joint", deg_to_rad(90));
-
-    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    if(!success) {
-        ROS_WARN("Unable to plan path. Rerun or adjust target pose or planning parameters");
-        return 1;
-    }
-
-    // Execute motion
-    move_group.move();
-
-
-    // ##### Move down slightly #####
-
-    move_group.getCurrentState()->copyJointGroupPositions(joint_model_group, joint_group_positions);
-    joint_group_positions[1] += deg_to_rad(5);  // shoulder_lift_joint
-    move_group.setJointValueTarget(joint_group_positions);
+    target_pose1 = move_group.getCurrentPose().pose;
+    target_pose1.position.x -= 0.7;
+    target_pose1.position.y += 0.15;
+    move_group.setPoseTarget(target_pose1);
 
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if(!success) {
@@ -286,36 +276,12 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // Execute motion to set position
-    ROS_INFO("Found path, moving robot...");
+    ROS_INFO("Found path up 15 cm, moving robot...");
     move_group.move();
 
 
-    // ##### gripper off #####
+    ROS_INFO("Turning on the gripper...");
     offClient.call(srv);
-
-
-    // ##### Move to home #####
-    group_state = "home";
-    move_group.setNamedTarget(group_state);
-    move_group.setMaxVelocityScalingFactor(1);
-
-    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    if(!success) {
-        ROS_WARN("Unable to plan path. Rerun or adjust target pose or planning parameters");
-        return 1;
-    }
-
-    // Execute motion
-    move_group.move();
-
-    
-
-
-    // Delete box from Gazebo
-    // Currently commented out so the box can be seen after the program finishes.
-    // The box will be deleted when this node is started again
-    // delete_box(nh);
 
     ros::shutdown();
     return 0;
@@ -360,3 +326,4 @@ auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> bool {
     spawnModel.call(srv);
     return srv.response.success;
 }
+
