@@ -4,11 +4,16 @@
 
 Ensure all necessary directories exist, clone this repository
 
+Note: Use the HTTPS url instead if you still haven't set up your SSH keys
+
+`https://github.com/UNSW-MTRN4230-T2-2021/lab09_demo.git`
+
 ```bash
 mkdir -p ~/lab_workspaces/lab09_ws/src
 mkdir -p ~/lab_demo_repos && cd ~/lab_demo_repos/
 git clone git@github.com:UNSW-MTRN4230-T2-2021/lab09_demo
 ```
+
 
 Link the packages into the workspace
 
@@ -52,7 +57,8 @@ off across the table.
 
 It uses a new MoveIt! configuration generated for the UR5e + epick combination.
 
-More details to come...
+For a walk through of the code, you can watch a recording of Luke demoing the code and explaining it here: 
+https://web.microsoftstream.com/video/046cebde-3e94-4e5f-aeae-936956d3b2ce
 
 ## Issues and limitations
 
