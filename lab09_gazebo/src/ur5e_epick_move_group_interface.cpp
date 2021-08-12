@@ -61,7 +61,6 @@ constexpr auto deg_to_rad(double deg) -> double {
 auto spawn_box(ros::NodeHandle n, geometry_msgs::Pose pose) -> bool;
 auto delete_box(ros::NodeHandle n) -> bool;
 
-// static const std::string model_path = "/home/raghav/lab_demo_repos/lab09_demo/lab09_gazebo/models/box/box.sdf";
 static const std::string model_path = "/home/mtrn4230/lab_demo_repos/lab09_demo/lab09_gazebo/models/box/box.sdf";
 
 /* The planning group can be found in the ur5e_epick_moveit_config/config/ur5e.srdf */
