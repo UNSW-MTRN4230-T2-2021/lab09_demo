@@ -4,7 +4,7 @@
   <xacro:macro name="epick_hand_gazebo" params="robot_name">
     <!-- http://docs.ros.org/melodic/api/gazebo_plugins/html/group__GazeboRosVacuumGripper.html -->
     <gazebo>
-      <plugin name="gazebo_ros_vacuum_gripper" filename="libgazebo_ros_vacuum_gripper.so">
+      <plugin name="better_epick" filename="libbetter_epick.so">
         <robotNamespace>${robot_name}/epick</robotNamespace>
         <bodyName>epick_end_effector</bodyName>
         <topicName>grasping</topicName>
